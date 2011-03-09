@@ -1,0 +1,30 @@
+#!/bin/bash
+# description: MCP
+# processname: twistd
+# chkconfig: 2345 55 25
+
+TWISTD=/home/jkoelker/devenvs/shaft/bin/twistd
+MODULE=shaft
+PIDFILE=/home/jkoelker/devenvs/shaft/var/run/${MODULE}.pid
+LOGFILE=/home/jkoelker/devenvs/shaft/var/log/${MODULE}.log
+
+if [ "${1}" = 'start' ]; then
+    RUNPID=`pgrep -f ${TWISTD} 2>/dev/null`
+    if [ "$?" -ne 0 ]; then
+        RUNPID=-1
+    fi
+    RECPID=`cat ${PIDFILE} 2>/dev/null`
+    if [ "$?" -ne 0 ]; then
+        RECPID=-2
+    fi
+    if [ "${RUNPID}" -eq "${RECPID}" ]; then
+        echo "${MODULE} is already running!"
+    else
+        ${TWISTD} --pidfile=${PIDFILE} --logfile=${LOGFILE} ${MODULE}
+    fi
+elif [ "${1}" = 'stop' ]; then
+    kill -s SIGTERM `cat ${PIDFILE} 2>/dev/null` 2>/dev/null
+else
+    echo "usage $0 [start|stop]"
+fi
+
