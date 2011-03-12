@@ -28,6 +28,7 @@ SAVEON = "SAVEON"
 LIST = "LIST"
 SAY = "SAY"
 TIME = "TIME"
+WHITELIST = "WHITELIST"
 UNKNOWN = "UNKNOWN"
 
 logLine = re.compile("(\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d) \[(\w+)\] (.*)")
@@ -89,8 +90,18 @@ saveOnRegexes = (saveOn,)
 saveOff = re.compile("(.+): (Disabling) level saving..")
 saveOffRegexes = (saveOff,)
 
-connectedUsers =re.compile("Connected players: (.+)")
+connectedUsers = re.compile("Connected players: (.*)")
 listRegexes = (connectedUsers, )
+
+whiteListOn = re.compile("(.+): Turned (on) white-listing")
+whiteListOff = re.compile("(.+): Turned (off) white-listing")
+whiteListList = re.compile("(White-listed) (players): (.*)")
+whiteListAdd = re.compile("(.+): (Added) (.+) to white-list")
+whiteListRemove = re.compile("(.+): (Removed) (.+) from white-list")
+whiteListReload = re.compile("(.+): (Reloaded) white-list from file")
+whiteListRegexes = (whiteListOn, whiteListOff, whiteListList,
+                    whiteListAdd, whiteListRemove, whiteListReload,
+                    whiteListRegexes,)
 
 
 def isType(regexes, text):
@@ -99,6 +110,9 @@ def isType(regexes, text):
         if m is not None:
             return m
     return None
+
+def isWhiteList(text):
+    return isType(whiteListRegexes, text)
 
 def isOp(text):
     return isType(opRegexes, text)
@@ -161,6 +175,8 @@ def checkType(text):
         return STOP
     elif isChat(text) is not None:
         return CHAT
+    elif isWhiteList(text) is not None:
+        return WHITELIST
     elif isOp(text) is not None:
         return OP
     elif isDeOp(text) is not None:
@@ -230,6 +246,35 @@ class BaseHandler(object):
     def handle(self, line):
         self.log(line)
 
+
+whiteListDeferreds = {}
+class WhiteListHandler(BaseHandler):
+    type = WHITELIST
+
+    def handle(self, line):
+        m = isWhiteList(line)
+        op = m.group(1)
+        action = m.group(2).lower()
+
+        result = {'action': WHITELIST,
+                  'op': op,
+                  'type': action,
+                  'success': True}
+
+        if action == "reloaded":
+            whiteListDeferreds[action].callback(result)
+
+        elif action == "players":
+            users = m.group(3).strip().split(' ')
+            whiteListDeferreds[action].callback(result)
+
+        elif action in ("off", "on"):
+            whiteListDeferreds[action].callback(result)
+
+        elif action in ("removed", "added"):
+            user = m.group(3)
+            result['user'] = user
+            whiteListDeferreds[(action, user)].callback(result)
 
 listDeferred = None
 class ListHandler(BaseHandler):
@@ -744,6 +789,46 @@ class MinecraftServerProtocol(protocol.ProcessProtocol):
         self._sendCommand("list")
         return listDeferred
 
+    def whiteListOff(self):
+        log.msg("Turning off whitelist")
+        action = "off"
+        whiteListDeferreds[action] = defer.Deferred()
+        self._sendCommand("whitelist", action)
+        return whiteListDeferreds[action]
 
+    def whiteListOn(self):
+        log.msg("Turning on whitelist")
+        action = "on"
+        whiteListDeferreds[action] = defer.Deferred()
+        self._sendCommand("whitelist", action)
+        return whiteListDeferreds[action]
+
+    def whiteListReload(self):
+        log.msg("Reloading whitelist")
+        action = "reloaded"
+        whiteListDeferreds[action] = defer.Deferred()
+        self._sendCommand("whitelist", "reload")
+        return whiteListDeferreds[action]
+
+    def whiteListList(self):
+        log.msg("Listing whitelist")
+        action = "players"
+        whiteListDeferreds[action] = defer.Deferred()
+        self._sendCommand("whitelist", "list")
+        return whiteListDeferreds[action]
+
+    def whiteListUser(self, username):
+        log.msg("Whitelisting user: %s" % username)
+        action = "added"
+        whiteListDeferreds[(action, username)] = defer.Deferred()
+        self._sendCommand("whitelist", "add", username)
+        return whiteListDeferreds[(action, username)]
+
+    def unWhiteListUser(self, username):
+        log.msg("Unwhitelisting user: %s" % username)
+        action = "removed"
+        whiteListDeferreds[(action, username)] = defer.Deferred()
+        self._sendCommand("whitelist", "remove", username)
+        return whiteListDeferreds[(action, username)]
 
 
