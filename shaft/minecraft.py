@@ -213,6 +213,18 @@ def checkType(text):
     return UNKNOWN
 
 
+def maybeCallback(d, result, key=None, delKey=True):
+    if d is None:
+        return
+
+    if isinstance(d, dict) and key is not None and key in d:
+        d[key].callback(result)
+        if delKey:
+            del d[key]
+    else:
+        d.callback(result)
+
+
 class ILineHandler(Interface):
     type = Attribute("A C{str} specifying the type of message the "
                      "Handler handles")
@@ -248,10 +260,13 @@ class BaseHandler(object):
 
 
 whiteListDeferreds = {}
+whiteListManager = None
 class WhiteListHandler(BaseHandler):
     type = WHITELIST
 
     def handle(self, line):
+        global whiteListManager
+
         m = isWhiteList(line)
         op = m.group(1)
         action = m.group(2).lower()
@@ -262,19 +277,21 @@ class WhiteListHandler(BaseHandler):
                   'success': True}
 
         if action == "reloaded":
-            whiteListDeferreds[action].callback(result)
+            maybeCallback(whiteListDeferreds, result, key=action)
 
         elif action == "players":
             users = m.group(3).strip().split(' ')
-            whiteListDeferreds[action].callback(result)
+            result['users'] = users
+            maybeCallback(whiteListDeferreds, result, key=action)
 
         elif action in ("off", "on"):
-            whiteListDeferreds[action].callback(result)
+            whiteListManager = maybeCallback(whiteListManager, result)
+            maybeCallback(whiteListDeferreds, result, key=action)
 
         elif action in ("removed", "added"):
             user = m.group(3)
             result['user'] = user
-            whiteListDeferreds[(action, user)].callback(result)
+            maybeCallback(whiteListDeferreds, result, key=(action, user))
 
 listDeferred = None
 class ListHandler(BaseHandler):
@@ -286,11 +303,9 @@ class ListHandler(BaseHandler):
         m = isList(line)
         users = m.group(1).strip().split(' ')
 
-        if listDeferred is not None:
-            listDeferred.callback({'action': LIST,
-                                   'users': users,
-                                   'success': True})
-            listDeferred = None
+        listDeferred = maybeCallback(listDeferred, {'action': LIST,
+                                                    'users': users,
+                                                    'success': True})
 
 
 saveDeferred = None
@@ -310,11 +325,9 @@ class SaveAllHandler(BaseHandler):
             saving = True
             return
 
-        if saveDeferred is not None:
-            saveDeferred.callback({'action': SAVEALL,
-                                   'op': op,
-                                   'success': True})
-            saveDeferred = None
+        saveDeferred = maybeCallback(saveDeverred, {'action': SAVEALL,
+                                                    'op': op,
+                                                    'success': True})
         saving = False
 
 
@@ -328,11 +341,9 @@ class saveOnHandler(BaseHandler):
         m = isSaveOn(line)
         op = m.group(1)
 
-        if saveOnDeferred is not None:
-            saveOnDeferred.callback({'action': SAVEON,
-                                     'op': op,
-                                     'success': True})
-            saveOnDeferred = None
+        saveOnDeferred = maybeCallback(saveOnDeferred, {'action': SAVEON,
+                                                        'op': op,
+                                                        'success': True})
 
 
 saveOffDeferred = None
@@ -345,11 +356,10 @@ class saveOffHandler(BaseHandler):
         m = isSaveOff(line)
         op = m.group(1)
 
-        if saveOffDeferred is not None:
-            saveOffDeferred.callback({'action': SAVEOFF,
-                                      'op': op,
-                                      'suvvess': True})
-            saveOffDeferred = None
+        saveOffDeferred = maybeCallback(saveOffDeferred, 
+                                        {'action': SAVEOFF,
+                                         'op': op,
+                                         'suvvess': True})
 
 
 timeDeferreds = {}
@@ -362,13 +372,14 @@ class TimeHandler(BaseHandler):
         type = m.group(2).lower()
         amount = m.group(3)
 
-        if (type, amount) in timeDeferreds:
-            timeDeferreds[(type, amount).callback({'action': TIME,
-                                                   'op': op,
-                                                   'type': type,
-                                                   'amount': amount,
-                                                   'success': True})
-            del timeDeferreds[(type, amount)
+        result = {'action': TIME,
+                  'op': op,
+                  'type': type,
+                  'amount': amount,
+                  'success': True}
+
+        maybeCallback(timeDeferreds, result, key=(type, amount)) 
+
 
 sayDeferreds = {}
 class SayHandler(BaseHandler):
@@ -379,12 +390,13 @@ class SayHandler(BaseHandler):
         op = m.group(1)
         message = m.group(2)
 
-        if message in sayDeferreds:
-            sayDeferreds[message].callback({'action': SAY,
-                                            'op': op,
-                                            'message': message,
-                                            'success': True})
-            del sayDeferreds[message]
+        result = {'action': SAY,
+                  'op': op,
+                  'message': message,
+                  'success': True}
+
+        maybeCallback(sayDeferreds, result, key=message)
+
 
 giveDeferreds = {}
 class GiveHandler(BaseHandler):
@@ -396,13 +408,13 @@ class GiveHandler(BaseHandler):
         user = m.group(2)
         item = m.group(3)
 
-        if (user, item) in giveDeferreds:
-            giveDeferreds[(user, item)].callback({'action': GIVE,
-                                                  'op': op,
-                                                  'user': user,
-                                                  'item': item,
-                                                  'success': True})
-            del giveDeferreds[(user, item)]
+        result = {'action': GIVE,
+                  'op': op,
+                  'user': user,
+                  'item': item,
+                  'success': True}
+
+        maybeCallback(giveDeferreds, result, key=(user, item))
 
 
 tpDeferreds = {}
@@ -415,12 +427,12 @@ class TpHandler(BaseHandler):
         user1 = m.group(2)
         user2 = m.group(3)
 
-        if (user1, user2) in tpDeferreds:
-            tpDeferreds[(user1, user2)].callback({'action': TP,
-                                                  'user1': user1,
-                                                  'user2': user2,
-                                                  'success': True})
-            del tpDeferreds[(user1, user2)]
+        result = {'action': TP,
+                  'user1': user1,
+                  'user2': user2,
+                  'success': True}
+
+        maybeCallback(tpDeferreds, result, key=(user1, user2))
 
 
 tellDeferreds = {}
@@ -439,12 +451,12 @@ class TellHandler(BaseHandler):
             message = m.group(2)
             user2 = m.group(3)
 
-        if user2 in tellDeferreds:
-            tellDeferreds[(user2, what)].callback({'action': TELL,
-                                                   'user1': user1,
-                                                   'user2': user2,
-                                                   'success': True})
-            del tellDeferreds[(user2, what)]
+        result = {'action': TELL,
+                  'user1': user1,
+                  'user2': user2,
+                  'success': True}
+
+        maybeCallback(tellDeferreds, result, key=(user2, what))
 
 
 class ChatHandler(BaseHandler):
@@ -468,12 +480,12 @@ class PardonIPHandler(BaseHandler):
         op = group(1)
         user = group(2)
 
-        if user in pardonIPDeferreds:
-            pardonIPDeferreds[user].callback({'action': PARDONIP,
-                                            'op': op,
-                                            'user': user,
-                                            'success': True})
-            del pardonIPDeferred[user]
+        result = {'action': PARDONIP,
+                  'op': op,
+                  'user': user,
+                  'success': True}
+
+        maybeCallback(pardonIPDeferreds, result, key=user)
 
 
 banIPDeferreds = {}
@@ -485,12 +497,13 @@ class BanHandler(BaseHandler):
         op = group(1)
         user = group(2)
 
-        if user in banIPDeferreds:
-            banIPDeferreds[user].callback({'action': BANIP,
-                                           'op': op,
-                                           'user': user,
-                                           'success': True})
-            del banIPDeferred[user]
+        result = {'action': BANIP,
+                  'op': op,
+                  'user': user,
+                  'success': True}
+
+        maybeCallback(banIPDeferreds, result, key=user)
+
 
 pardonDeferreds = {}
 class PardonHandler(BaseHandler):
@@ -501,12 +514,12 @@ class PardonHandler(BaseHandler):
         op = group(1)
         user = group(2)
 
-        if user in pardonDeferreds:
-            pardonDeferreds[user].callback({'action': PARDON,
-                                            'op': op,
-                                            'user': user,
-                                            'success': True})
-            del pardonDeferred[user]
+        result = {'action': PARDON,
+                  'op': op,
+                  'user': user,
+                  'success': True}
+
+        maybeCallback(pardonDeferreds, result, key=user)
 
 
 banDeferreds = {}
@@ -518,12 +531,13 @@ class BanHandler(BaseHandler):
         op = group(1)
         user = group(2)
 
-        if user in banDeferreds:
-            banDeferreds[user].callback({'action': BAN,
-                                         'op': op,
-                                         'user': user,
-                                         'success': True})
-            del banDeferred[user]
+        result = {'action': BAN,
+                  'op': op,
+                  'user': user,
+                  'success': True})
+
+        maybeCallback(banDeferreds, result, key=user)
+
 
 opDeferreds = {}
 class OpHandler(BaseHandler):
@@ -534,12 +548,12 @@ class OpHandler(BaseHandler):
         op = group(1)
         user = group(2)
 
-        if user in opDeferreds:
-            opDeferreds[user].callback({'action': OP,
-                                        'op': op,
-                                        'user': user,
-                                        'success': True})
-            del opDeferred[user]
+        result = {'action': OP,
+                  'op': op,
+                  'user': user,
+                  'success': True})
+
+        maybeCallback(opDeferreds, result, key=user)
 
 
 deopDeferreds = {}
@@ -551,12 +565,12 @@ class DeOpHandler(BaseHandler):
         op = group(1)
         user = group(2)
 
-        if user in deopDeferreds:
-            deopDeferreds[user].callback({'action': DEOP,
-                                          'op': op,
-                                          'user': user,
-                                          'success': True})
-            del deopDeferred[user]
+        result = {'action': DEOP,
+                  'op': op,
+                  'user': user,
+                  'success': True})
+
+        maybeCallback(deopDeferreds, result, key=user)
 
 
 kickDeferreds = {}
@@ -576,12 +590,12 @@ class KickHandler(BaseHandler):
             success = False
             log.msg("User %s not connected" % user)
 
-        if user in kickDeferreds:
-            kickDeferreds[user].callback({'action': KICK,
-                                          'op': op,
-                                          'user': user,
-                                          'success': success})
-            del kickDeferreds[user]
+        result = {'action': KICK,
+                  'op': op,
+                  'user': user,
+                  'success': success})
+
+        maybeCallback(kickDeferreds, result, key=user)
 
 
 stopDeferred = None
@@ -603,9 +617,8 @@ class StopHandler(BaseHandler):
         if m is not None:
             log.msg("Server is stopping")
 
-            if stopDeferred is not None:
-                stopDeferred.callback({'action': STOP, 'success': True})
-                stopDeferred = None
+            stopDeferred = maybeCallback(stopDeferred, {'action': STOP,
+                                                        'success': True})
             return
 
         m = stoppingChunks.match(line)
@@ -830,5 +843,18 @@ class MinecraftServerProtocol(protocol.ProcessProtocol):
         whiteListDeferreds[(action, username)] = defer.Deferred()
         self._sendCommand("whitelist", "remove", username)
         return whiteListDeferreds[(action, username)]
+
+    def setWhiteListManager(self, f):
+        global whiteListManager
+
+        def resetListener(_):
+            global whiteListManager
+
+            log.msg("Setting whitelist manager to %s" % f.__name__)
+            whiteListManager = defer.Deferred()
+            whiteListManager.addCallback(f)
+            whiteListManager.addCallback(resetListener)
+
+        resetListener(None)
 
 
