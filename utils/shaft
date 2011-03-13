@@ -1,5 +1,5 @@
 #!/bin/bash
-# description: MCP
+# description: shaft 
 # processname: twistd
 # chkconfig: 2345 55 25
 
