@@ -21,7 +21,7 @@ setup(name='shaft',
       zip_safe=False,
       install_requires=[
           'twisted',
-          'Crypto'
+          'pycrypto'
       ],
       entry_points="""
       # -*- Entry points: -*-
