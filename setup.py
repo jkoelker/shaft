@@ -27,4 +27,5 @@ setup(name='shaft',
       entry_points="""
       # -*- Entry points: -*-
       """,
+      data_files=[('/etc/init.d', ['utils/shaft'])],
       )
