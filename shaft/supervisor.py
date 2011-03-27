@@ -105,6 +105,17 @@ class Supervisor(procmon.ProcessMonitor):
     # Set the doc of the function to the overridden doc
     stopProcess.__doc__ = procmon.ProcessMonitor.stopProcess.__doc__
 
+    def getMinecraftProto(self, name='minecraft'):
+        if name in self.protocols:
+            return self.protocols[name]
+
+        return None
+
+    def minecraftRunning(self, name='minecraft'):
+        if name in self.processes and name in self.protocols:
+            return True
+        return False
+
     def startMinecraft(self, jar, java="java", name='minecraft',
                        uid=None, gid=None, env={}, path=None):
         """
