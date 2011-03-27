@@ -33,10 +33,13 @@ def backup(path, type, callback=None, errback=None):
     producer = stream.StreamProducer(process.outStream)
 
     d = process.run()
-    if callback is not None:
-        d.addCallback(callback)
-    if errback is not None:
-        d.addErrback(errback)
+    if callback is not None and errback is not None:
+        d.addBoth(callback, errback)
+    else:
+        if callback is not None:
+            d.addCallback(callback)
+        if errback is not None:
+            d.addErrback(errback)
 
     return producer
 
