@@ -3,10 +3,12 @@
 # processname: twistd
 # chkconfig: 2345 55 25
 
-TWISTD=/home/jkoelker/devenvs/shaft/bin/twistd
+TWISTD=twistd
 MODULE=shaft
-PIDFILE=/home/jkoelker/devenvs/shaft/var/run/${MODULE}.pid
-LOGFILE=/home/jkoelker/devenvs/shaft/var/log/${MODULE}.log
+PIDFILE=/var/run/${MODULE}.pid
+LOGFILE=/var/log/${MODULE}.log
+USER=minecraft
+GROUP=minecraft
 
 if [ "${1}" = 'start' ]; then
     RUNPID=`pgrep -f ${TWISTD} 2>/dev/null`
@@ -20,7 +22,7 @@ if [ "${1}" = 'start' ]; then
     if [ "${RUNPID}" -eq "${RECPID}" ]; then
         echo "${MODULE} is already running!"
     else
-        ${TWISTD} --pidfile=${PIDFILE} --logfile=${LOGFILE} ${MODULE}
+        ${TWISTD} --uid=${USER} --gid=${GROUP} --pidfile=${PIDFILE} --logfile=${LOGFILE} ${MODULE}
     fi
 elif [ "${1}" = 'stop' ]; then
     kill -s SIGTERM `cat ${PIDFILE} 2>/dev/null` 2>/dev/null
