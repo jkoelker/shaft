@@ -12,8 +12,10 @@ from twisted.conch.manhole_tap import chainedProtocolFactory
 from twisted.conch.ssh import keys
 from twisted.conch import error
 
+from twisted.web import server
 
-from shaft import settings
+
+from shaft import settings, web
 
 import base64
 
@@ -83,6 +85,14 @@ class ShaftServiceMaker(object):
         sshService = strports.service(str(settings.config["ssh"]["port"]),
                                       sshFactory)
         sshService.setServiceParent(svc)
+
+        site = server.Site(web.getRoot(),
+                           logPath=settings.config["web"]["log"])
+
+        if int(settings.config["web"]["port"]) != 0:
+            siteService = strports.service(settings.config["web"]["port"],
+                                           site)
+            site.setServiceParent(svc)
 
         return svc
 
