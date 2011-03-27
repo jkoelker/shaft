@@ -139,4 +139,8 @@ class Supervisor(procmon.ProcessMonitor):
     def stopMinecraft(self, name='minecraft'):
         return self.stopProcess(name)
 
+__supervisor = Supervisor()
+
+def get():
+    return __supervisor
 

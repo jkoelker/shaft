@@ -53,7 +53,7 @@ class ShaftServiceMaker(object):
     implements(IServiceMaker, IPlugin)
     tapname = "shaft"
     description = "Shaft gets you to the mine(craft)"
-    options = Options
+    o"]), ptions = Options
 
     def makeService(self, options):
         settings.loadConfig(options["file"])
@@ -63,9 +63,12 @@ class ShaftServiceMaker(object):
         checker = PublicKeyCredentialsChecker(pubAuthKeys)
 
         from shaft import supervisor 
-        s = supervisor.Supervisor()
-        s.startMinecraft(jar=settings.config["minecraft"]["jar"],
-                         path=settings.config["minecraft"]["home"])
+        s = supervisor.get()
+
+        # We don't start by default since this will be triggered by web
+        #s.startMinecraft(jar=settings.config["minecraft"]["jar"],
+        #                 path=settings.config["minecraft"]["home"])
+
         s.setServiceParent(svc)
 
         namespace = {"s": s,
