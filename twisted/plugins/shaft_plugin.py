@@ -6,17 +6,48 @@ from twisted.plugin import IPlugin
 from twisted.application.service import IServiceMaker
 from twisted.application import internet, service, strports
 
-from twisted.cred import checkers, portal
-from twisted.conch.manhole import ColoredManhole
+from twisted.cred import credentials, checkers, portal
 from twisted.conch.manhole_ssh import ConchFactory, TerminalRealm
 from twisted.conch.manhole_tap import chainedProtocolFactory
+from twisted.conch.ssh import keys
+from twisted.conch import error
 
-creds = {"admin": "p"}
-jarFile = "/home/jkoelker/Downloads/test/minecraft_server.jar"
-workingPath = "/home/jkoelker/Downloads/test"
+
+from shaft import settings
+
+import base64
+
+pubAuthKeys = {"admin": "AAAAB3NzaC1yc2EAAAADAQABAAABAQDG3Rx6KpTyu5Hr3sjg3BHF/TyTKLxCTV9pxFCL5ISEv1f2BUBkmhhkD8AmPJBwByVcjgNvTnNV4WpQbY69KfHgolEe68BWXMGH7Db/wYZdFluHy2kM38lgxpC1FMon1qBEC4uh+BI0Xvowl9BwuDGwStwJlaxtxqsOZu7FvPhZ2j01aQXLK3lYss0mYDHaee4NIGKAHs1Co8LKhAu6T8EJ/7n1Phnh0E80BCwnw4RldBgBchLtwQhLUIFkPbQsijjSNVOMbwhrMzST7A2+bZvstZzLIqeSymHlfmhRoVrWk11MHClH4GYM/Sl0ootWrPLlW9oGipcLKxnOQLWzOQnx"}
+
+
+class PublicKeyCredentialsChecker:
+    implements(checkers.ICredentialsChecker)
+    credentialInterfaces = (credentials.ISSHPrivateKey,)
+
+    def __init__(self, authKeys):
+        self.authKeys = authKeys
+
+        def requestAvatarId(self, creds):
+            if creds.username in self.authKeys:
+                userKey = self.authKeys[creds.username]
+                if not creds.blob == base64.decodestring(userKey):
+                    raise failure.Failure(error.ConchError("Unrecognized key"))
+                if not creds.signature:
+                    return failure.Failure(error.ValidPublicKey())
+                pubKey = keys.Key.fromString(data=creds.blob)
+                if pubKey.verify(creds.signature, creds.sigData):
+                    return creds.username
+                else:
+                    return failure.Failure(error.ConchError("Incorrect signature"))
+            else:
+                return failure.Failure(error.ConchError("No such user"))
+
 
 class Options(usage.Options):
-    optParameters = [["ssh", "s", 2222, "The port number for ssh shell."]]
+    optParameters = [
+            ["file", "f", settings.DEFAULT_CONFIG_FILE,
+             "The config file to use [%s]." % settings.DEFAULT_CONFIG_FILE],]
+
 
 class ShaftServiceMaker(object):
     implements(IServiceMaker, IPlugin)
@@ -25,13 +56,16 @@ class ShaftServiceMaker(object):
     options = Options
 
     def makeService(self, options):
+        settings.loadConfig(options["file"])
+
         svc = service.MultiService()
 
-        checker = checkers.InMemoryUsernamePasswordDatabaseDontUse(**creds)
+        checker = PublicKeyCredentialsChecker(pubAuthKeys)
 
         from shaft import supervisor 
         s = supervisor.Supervisor()
-        s.startMinecraft(jar=jarFile, path=workingPath)
+        s.startMinecraft(jar=settings.config["minecraft"]["jar"],
+                         path=settings.config["minecraft"]["home"])
         s.setServiceParent(svc)
 
         namespace = {"s": s,
@@ -43,7 +77,8 @@ class ShaftServiceMaker(object):
 
         sshPortal = portal.Portal(sshRealm, [checker])
         sshFactory = ConchFactory(sshPortal)
-        sshService = strports.service(str(options["ssh"]), sshFactory)
+        sshService = strports.service(str(settings.config["ssh"]["port"]),
+                                      sshFactory)
         sshService.setServiceParent(svc)
 
         return svc
