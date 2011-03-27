@@ -20,7 +20,7 @@ setup(name='shaft',
       include_package_data=True,
       zip_safe=False,
       install_requires=[
-          'twisted',
+          'twisted <= 10.2',
           'pycrypto',
           'pyasn1'
       ],
