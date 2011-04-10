@@ -534,7 +534,7 @@ class BanHandler(BaseHandler):
         result = {'action': BAN,
                   'op': op,
                   'user': user,
-                  'success': True})
+                  'success': True}
 
         maybeCallback(banDeferreds, result, key=user)
 
@@ -551,7 +551,7 @@ class OpHandler(BaseHandler):
         result = {'action': OP,
                   'op': op,
                   'user': user,
-                  'success': True})
+                  'success': True}
 
         maybeCallback(opDeferreds, result, key=user)
 
@@ -568,7 +568,7 @@ class DeOpHandler(BaseHandler):
         result = {'action': DEOP,
                   'op': op,
                   'user': user,
-                  'success': True})
+                  'success': True}
 
         maybeCallback(deopDeferreds, result, key=user)
 
