@@ -3,6 +3,8 @@ from twisted.web import resource, server
 
 from shaft import backup, minecraft, settings, supervisor
 
+import simplejson as json
+
 import os
 
 class Minecraft(resource.Resource):
