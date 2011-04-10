@@ -22,7 +22,9 @@ setup(name='shaft',
       install_requires=[
           'twisted <= 10.2',
           'pycrypto',
-          'pyasn1'
+          'pyasn1',
+          'simplejson',
+
       ],
       entry_points="""
       # -*- Entry points: -*-
