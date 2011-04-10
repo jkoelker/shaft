@@ -92,7 +92,7 @@ class ShaftServiceMaker(object):
         if int(settings.config["web"]["port"]) != 0:
             siteService = strports.service(settings.config["web"]["port"],
                                            site)
-            site.setServiceParent(svc)
+            siteService.setServiceParent(svc)
 
         return svc
 
