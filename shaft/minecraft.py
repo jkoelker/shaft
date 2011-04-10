@@ -747,7 +747,7 @@ class MinecraftServerProtocol(protocol.ProcessProtocol):
 
     def giveUser(self, username, item, quantity=1):
         log.msg("Giving: %s %s (%s)" % (username, item, quantity))
-        giveDeferreds[(username, item)] = new defer.Deferred()
+        giveDeferreds[(username, item)] = defer.Deferred()
         self._sendCommand("give", username, item, quantity)
         return giveDeferreds[(username, item)]
 
