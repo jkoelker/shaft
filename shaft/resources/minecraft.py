@@ -24,12 +24,12 @@ class Minecraft(resource.Resource):
                                        http.RESPONSES[http.BAD_REQUEST],
                                        "action required")
 
-        else if action.lower() == "start":
+        elif action.lower() == "start":
             d = s.startMinecraft(jar=settings.config["minecraft"]["jar"],
                                  path=settings.config["minecraft"]["home"])
             d.addCallback(started)
 
-        else if action.lower() == "stop":
+        elif action.lower() == "stop":
             d = s.stopMinecraft()
             d.addCallback(stopped)
 
