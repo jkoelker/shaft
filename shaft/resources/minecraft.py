@@ -8,7 +8,7 @@ import simplejson as json
 import os
 
 class Minecraft(resource.Resource):
-    def render_POST(self, requst):
+    def render_POST(self, request):
 
         def started(result):
             request.finish()
