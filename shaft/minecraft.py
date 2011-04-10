@@ -593,7 +593,7 @@ class KickHandler(BaseHandler):
         result = {'action': KICK,
                   'op': op,
                   'user': user,
-                  'success': success})
+                  'success': success}
 
         maybeCallback(kickDeferreds, result, key=user)
 
