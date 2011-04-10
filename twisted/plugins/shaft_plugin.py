@@ -55,7 +55,7 @@ class ShaftServiceMaker(object):
     implements(IServiceMaker, IPlugin)
     tapname = "shaft"
     description = "Shaft gets you to the mine(craft)"
-    o"]), ptions = Options
+    options = Options
 
     def makeService(self, options):
         settings.loadConfig(options["file"])
