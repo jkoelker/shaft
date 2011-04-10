@@ -100,8 +100,8 @@ whiteListAdd = re.compile("(.+): (Added) (.+) to white-list")
 whiteListRemove = re.compile("(.+): (Removed) (.+) from white-list")
 whiteListReload = re.compile("(.+): (Reloaded) white-list from file")
 whiteListRegexes = (whiteListOn, whiteListOff, whiteListList,
-                    whiteListAdd, whiteListRemove, whiteListReload,
-                    whiteListRegexes,)
+                    whiteListAdd, whiteListRemove, whiteListReload,)
+                    
 
 
 def isType(regexes, text):
