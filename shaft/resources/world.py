@@ -52,8 +52,6 @@ class World(resource.Resource):
 
         return server.NOT_DONE_YET
 
-
-
     def render_POST(self, request):
         pass
 
